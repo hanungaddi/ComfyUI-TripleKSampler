@@ -21,6 +21,7 @@ import comfy.samplers
 import nodes
 import torch
 from comfy_extras.nodes_model_advanced import ModelSamplingSD3
+import gc
 
 # Conditional server import for testing compatibility
 try:
@@ -1092,6 +1093,12 @@ class TripleKSamplerWan22LightningAdvanced(TripleKSamplerWan22Base):
             )
             stage1_output = stage1_result[0]
 
+        # Clean up the Stage 1 model to free RAM
+        logger.info("Stage 1: Unloading base model from RAM...")
+        del patched_base_high
+        gc.collect()
+        # ----------------------
+
         # Stage 2: Lightning high
         if skip_stage2:
             bare_logger.info("")  # separator before skipped stage log
@@ -1120,6 +1127,12 @@ class TripleKSamplerWan22LightningAdvanced(TripleKSamplerWan22Base):
             )
             stage2_output = stage2_result[0]
 
+        # Clean up the Stage 2 model to free RAM
+        logger.info("Stage 2: Unloading lightning_high model from RAM...")
+        del patched_lightning_high
+        gc.collect()
+        # ----------------------
+
         # Stage 3: Lightning low
         stage3_start = max(lightning_start, switch_step_final)
         stage3_info = self._format_stage_range(stage3_start, lightning_steps, lightning_steps)
@@ -1141,6 +1154,12 @@ class TripleKSamplerWan22LightningAdvanced(TripleKSamplerWan22Base):
             stage_name="Stage 3",
             stage_info=stage3_info,
         )
+
+        # Clean up the Stage 2 model to free RAM
+        logger.info("Stage 3: Unloading lightning_low model from RAM...")
+        del patched_lightning_low
+        gc.collect()
+        # ----------------------
 
         bare_logger.info("")  # final separator after all sampling completes
         if dry_run:
